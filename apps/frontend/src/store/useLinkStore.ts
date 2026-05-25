@@ -4,6 +4,8 @@ export interface LinkRecord {
   shortCode: string;
   shortUrl: string;
   originalUrl: string;
+  clicks: number;
+  isActive: boolean;
   expiresAt: string | null;
   createdAt: string;
 }
