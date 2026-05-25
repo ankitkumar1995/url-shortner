@@ -1,0 +1,56 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String?
+  role         String    @default("creator")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  urls         Url[]
+  apiKeys      ApiKey[]
+
+  @@map("users")
+}
+
+model Url {
+  id          BigInt    @id @default(autoincrement())
+  shortCode   String    @unique @map("short_code") @db.VarChar(12)
+  originalUrl String    @map("original_url") @db.VarChar(2048)
+  userId      String?   @map("user_id")
+  isActive    Boolean   @default(true) @map("is_active")
+  expiresAt   DateTime? @map("expires_at")
+  passcode    String?
+  qrCodeUrl   String?   @map("qr_code_url") @db.VarChar(512)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([shortCode])
+  @@index([userId])
+  @@index([expiresAt, isActive])
+  @@map("urls")
+}
+
+model ApiKey {
+  id             String    @id @default(uuid())
+  keyHash        String    @unique @map("key_hash")
+  userId         String    @map("user_id")
+  name           String
+  rateLimitTier  String    @default("free") @map("rate_limit_tier")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  expiresAt      DateTime? @map("expires_at")
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
