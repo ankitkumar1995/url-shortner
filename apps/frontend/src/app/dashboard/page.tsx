@@ -256,7 +256,7 @@ export default function Dashboard() {
             {/* Visual Mini Chart using Recharts */}
             <div className="h-28 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={DEVICE_DATA} layout="vertical" barCategorySpacing="20%">
+                <BarChart data={DEVICE_DATA} layout="vertical" barCategoryGap="20%">
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" hide />
                   <Tooltip
