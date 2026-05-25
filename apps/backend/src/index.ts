@@ -4,10 +4,10 @@ import { slidingWindowRateLimiter } from "./middlewares/rate-limiter";
 import { RedisService } from "./services/redis.service";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Connect to Redis on startup
-RedisService.getInstance();
+// RedisService.getInstance();
 
 // Parsers
 app.use(express.json());
