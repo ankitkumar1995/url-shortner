@@ -14,6 +14,12 @@ const RESERVED_WORDS = new Set([
   "sitemap.xml",
   "_next",
   "static",
+  "product",
+  "features",
+  "pricing",
+  "resources",
+  "sign-in",
+  "sign-up",
 ]);
 
 interface PageProps {
@@ -111,7 +117,7 @@ export default async function ShortCodeRedirectPage({ params }: PageProps) {
     }).then(() => {
       redis.incr("global:analytics:total_clicks");
     }).catch((err) => {
-      console.error("Next.js Telemetry Click write failed:", err);
+      console.error("Next.js Click log write failed:", err);
     });
 
   } catch (error) {
@@ -121,5 +127,9 @@ export default async function ShortCodeRedirectPage({ params }: PageProps) {
   }
 
   // 5. Temporary Redirect (302) to the long URL
-  redirect(originalUrl);
+  let targetUrl = originalUrl;
+  if (targetUrl && !/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = `https://${targetUrl}`;
+  }
+  redirect(targetUrl);
 }

@@ -47,8 +47,8 @@ export default async function AnalyticsPage({ params }: PageProps) {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-slate-200 uppercase">Telemetry Details</h1>
-              <span className="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Click logs analysis</span>
+              <h1 className="text-lg font-black tracking-tight text-slate-200 uppercase">Link Analytics</h1>
+              <span className="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Visitor demographics and clicks</span>
             </div>
           </div>
           <span className="text-xs bg-accent/10 text-accent border border-accent/20 px-3 py-1.5 rounded-xl font-bold uppercase tracking-wider">
@@ -63,11 +63,11 @@ export default async function AnalyticsPage({ params }: PageProps) {
         {/* Click Ingestion summary */}
         <div className="glass-card p-8 rounded-2xl space-y-6">
           <div className="space-y-1">
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block">Total Click Telemetry Resolved</span>
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block">Total Clicks Resolved</span>
             <h2 className="text-4xl font-black text-slate-100">{clickCount.toLocaleString()} clicks</h2>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed max-w-xl font-medium">
-            Click data is dynamically synchronized across multi-region edge nodes and batched into the ClickHouse OLAP cluster for instant search-engine aggregation.
+            Click data is tracked in real-time, helping you analyze user engagement, geographic distribution, and visitor device demographics easily.
           </p>
         </div>
 

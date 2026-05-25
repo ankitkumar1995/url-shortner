@@ -370,7 +370,7 @@ export default function Home() {
             {[
               { name: "Starter", price: "0", feat: ["100 links / mo", "Standard Analytics", "1 Custom Domain", "1 Team Seat"] },
               { name: "Professional", price: "29", feat: ["Unlimited links", "Real-Time Demographics", "3 Custom Domains", "5 Team Seats"], active: true },
-              { name: "Enterprise", price: "99", feat: ["Unlimited links", "Real-Time Telemetries", "10 Custom Domains", "Unlimited Seats"] },
+              { name: "Enterprise", price: "99", feat: ["Unlimited links", "Real-Time Analytics", "10 Custom Domains", "Unlimited Seats"] },
             ].map((plan) => (
               <div
                 key={plan.name}
@@ -500,7 +500,7 @@ export default function Home() {
           <span>&copy; {new Date().getFullYear()} LNKCX CORPORATION. ALL RIGHTS RESERVED.</span>
           <div className="flex gap-6 uppercase">
             <Link href="/" className="hover:text-slate-400">Terms of Service</Link>
-            <Link href="/" className="hover:text-slate-400">Privacy Core</Link>
+            <Link href="/" className="hover:text-slate-400">Privacy Policy</Link>
             <Link href="/" className="hover:text-slate-400">DPA Regulations</Link>
           </div>
         </div>
