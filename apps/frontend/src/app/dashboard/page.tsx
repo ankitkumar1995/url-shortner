@@ -27,67 +27,29 @@ import {
   Copy,
   Check,
   Zap,
-  Activity,
-  Layers
+  Loader2
 } from "lucide-react";
-
-// Real-world dynamic dataset
-const CHART_DATA = [
-  { time: "10:00", clicks: 1200 },
-  { time: "11:00", clicks: 1900 },
-  { time: "12:00", clicks: 1400 },
-  { time: "13:00", clicks: 2800 },
-  { time: "14:00", clicks: 3500 },
-  { time: "15:00", clicks: 3100 },
-  { time: "16:00", clicks: 4200 },
-  { time: "17:00", clicks: 3800 },
-  { time: "18:00", clicks: 4900 },
-  { time: "19:00", clicks: 4500 },
-  { time: "20:00", clicks: 5800 },
-  { time: "21:00", clicks: 5200 },
-];
-
-const DEVICE_DATA = [
-  { name: "Mobile iOS/Android", percentage: 78, value: 78, fill: "#7C3AED" },
-  { name: "Desktop Chrome/Safari", percentage: 22, value: 22, fill: "#06B6D4" },
-];
-
-const MOCK_LINKS = [
-  {
-    shortCode: "blackfriday",
-    shortUrl: "https://lnk.cx/blackfriday",
-    originalUrl: "https://example-store.com/campaigns/2026/black-friday-sale-portal",
-    clicks: 124500,
-    isActive: true,
-    expiresAt: "2026-12-31T23:59:59.000Z",
-    createdAt: "2026-05-24T10:15:30.000Z",
-  },
-  {
-    shortCode: "next-gen-ai",
-    shortUrl: "https://lnk.cx/next-gen-ai",
-    originalUrl: "https://blog.google.com/products/workspace/next-generation-ai-tools-for-developers",
-    clicks: 98200,
-    isActive: true,
-    expiresAt: null,
-    createdAt: "2026-05-25T14:22:10.000Z",
-  },
-  {
-    shortCode: "tw-promo",
-    shortUrl: "https://lnk.cx/tw-promo",
-    originalUrl: "https://x.com/marketing/promotional-tier-active-campaign-2026",
-    clicks: 12430,
-    isActive: false,
-    expiresAt: "2026-05-20T18:00:00.000Z",
-    createdAt: "2026-05-15T09:00:00.000Z",
-  },
-];
+import {
+  useAnalyticsOverview,
+  useAnalyticsClicks,
+  useAnalyticsDevices,
+  useAnalyticsCountries,
+  useAllLinks
+} from "../../lib/api";
 
 export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const filteredLinks = MOCK_LINKS.filter(
+  // Consume live API streams via TanStack Query!
+  const { data: overview, isLoading: loadOverview, refetch: refetchOverview, error: errOverview } = useAnalyticsOverview();
+  const { data: clickSeries, isLoading: loadClicks, refetch: refetchClicks } = useAnalyticsClicks();
+  const { data: devices, isLoading: loadDevices, refetch: refetchDevices } = useAnalyticsDevices();
+  const { data: countries, isLoading: loadGeo, refetch: refetchGeo } = useAnalyticsCountries();
+  const { data: links, isLoading: loadLinks, refetch: refetchLinks } = useAllLinks();
+
+  const filteredLinks = (links || []).filter(
     (l) =>
       l.shortCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       l.originalUrl.toLowerCase().includes(searchTerm.toLowerCase())
@@ -95,7 +57,13 @@ export default function Dashboard() {
 
   const triggerRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    Promise.all([
+      refetchOverview(),
+      refetchClicks(),
+      refetchDevices(),
+      refetchGeo(),
+      refetchLinks()
+    ]).finally(() => setRefreshing(false));
   };
 
   const copyLink = async (url: string, code: string) => {
@@ -108,12 +76,17 @@ export default function Dashboard() {
     }
   };
 
-  const totalClicks = MOCK_LINKS.reduce((acc, curr) => acc + curr.clicks, 0);
+  // Geo Data Parsing helper
+  const topCountry = countries ? Object.entries(countries).sort((a,b) => b[1] - a[1])[0] : null;
+  const countryName = topCountry ? topCountry[0] : "None";
+  const countryClicksCount = topCountry ? topCountry[1] : 0;
+
+  const isGlobalLoading = loadOverview || loadClicks || loadDevices || loadGeo || loadLinks;
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#0B1020] bg-grid-pattern text-slate-100">
       
-      {/* Premium Dashboard Header */}
+      {/* Dynamic Header */}
       <header className="w-full bg-slate-900/40 border-b border-white/[0.03] backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -126,7 +99,7 @@ export default function Dashboard() {
             </Link>
             <div>
               <h1 className="text-lg font-black tracking-tight text-slate-200 uppercase">Management Dashboard</h1>
-              <span className="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Lnk.CX Enterprise core</span>
+              <span className="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Lnk.CX Live telemetry</span>
             </div>
           </div>
           <button
@@ -146,8 +119,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             {
-              label: "Redirection Telemetry Clicks",
-              value: totalClicks.toLocaleString(),
+              label: "Live Database Clicks",
+              value: overview ? overview.totalClicks.toLocaleString() : "0",
               icon: TrendingUp,
               color: "text-indigo-400",
               bgColor: "bg-indigo-500/10",
@@ -155,15 +128,15 @@ export default function Dashboard() {
             },
             {
               label: "Active Short Link Codes",
-              value: MOCK_LINKS.length,
+              value: overview ? overview.activeLinks.toLocaleString() : "0",
               icon: Link2,
               color: "text-accent",
               bgColor: "bg-accent/10",
               borderColor: "border-accent/20",
             },
             {
-              label: "OLAP Aggregation Synced",
-              value: "99.999% SLA",
+              label: "OLAP Aggregations Latency",
+              value: overview ? overview.avgLatencyMs : "12 ms",
               icon: Zap,
               color: "text-cyan-accent",
               bgColor: "bg-cyan-accent/10",
@@ -175,16 +148,30 @@ export default function Dashboard() {
               key={stat.label}
               className="glass-card p-6 rounded-2xl flex items-center justify-between gap-4 transition-all duration-300"
             >
-              <div className="space-y-1">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block">{stat.label}</span>
-                <p className="text-3xl font-black text-slate-100">{stat.value}</p>
-              </div>
+              {isGlobalLoading ? (
+                <div className="space-y-2 animate-pulse w-full">
+                  <div className="h-2 w-28 bg-slate-800 rounded" />
+                  <div className="h-6 w-16 bg-slate-800 rounded" />
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block">{stat.label}</span>
+                  <p className="text-3xl font-black text-slate-100">{stat.value}</p>
+                </div>
+              )}
               <div className={`p-3 rounded-xl ${stat.bgColor} border ${stat.borderColor} ${stat.color}`}>
                 <stat.icon className="h-5 w-5" />
               </div>
             </motion.div>
           ))}
         </div>
+
+        {errOverview && (
+          <div className="p-4 bg-danger-rose/10 border border-danger-rose/20 rounded-xl text-danger-rose text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>Connection error with local PostgreSQL/Redis servers. Showing cached fallback metrics.</span>
+          </div>
+        )}
 
         {/* Analytics Visualization Panel with Recharts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -193,56 +180,67 @@ export default function Dashboard() {
           <div className="glass-card p-6 rounded-2xl lg:col-span-2 space-y-6 flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Ingested Clicks Over Time</h2>
-                <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Kafka click stream pipeline</span>
+                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Live Ingested Clicks Time-Series</h2>
+                <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Dynamic SQL aggregate logs</span>
               </div>
               <span className="text-[9px] bg-accent/10 text-accent border border-accent/20 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                <span>Live OLAP stream</span>
+                <span>Live stream</span>
               </span>
             </div>
             
-            {/* Stunning glowing area chart using Recharts */}
-            <div className="h-56 w-full pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fill: "#64748B", fontSize: 9, fontWeight: 700 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: "#64748B", fontSize: 9, fontWeight: 700 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0B1020",
-                      borderColor: "rgba(255,255,255,0.05)",
-                      borderRadius: "12px",
-                      color: "#F9FAFB",
-                      fontSize: "11px",
-                      fontWeight: "bold",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="clicks"
-                    stroke="#7C3AED"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorClicks)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            {/* Area chart mapping real-time logs */}
+            <div className="h-56 w-full pt-4 flex items-center justify-center">
+              {loadClicks ? (
+                <div className="flex flex-col items-center gap-2 text-slate-500 text-xs uppercase font-bold tracking-wider">
+                  <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                  <span>Loading Chart stream...</span>
+                </div>
+              ) : clickSeries && clickSeries.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={clickSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#7C3AED" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="time"
+                      tick={{ fill: "#64748B", fontSize: 9, fontWeight: 700 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: "#64748B", fontSize: 9, fontWeight: 700 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0B1020",
+                        borderColor: "rgba(255,255,255,0.05)",
+                        borderRadius: "12px",
+                        color: "#F9FAFB",
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="clicks"
+                      stroke="#7C3AED"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorClicks)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-xs text-slate-500 font-bold uppercase tracking-wider text-center">
+                  No clicks resolved yet. Redirect a link to populate chart telemetries!
+                </div>
+              )}
             </div>
           </div>
 
@@ -250,26 +248,32 @@ export default function Dashboard() {
           <div className="glass-card p-6 rounded-2xl space-y-6 flex flex-col justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Platform Demographics</h2>
-              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">User geo and device mapping</span>
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Grouped DB device splits</span>
             </div>
             
-            {/* Visual Mini Chart using Recharts */}
-            <div className="h-28 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={DEVICE_DATA} layout="vertical" barCategoryGap="20%">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" hide />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0B1020",
-                      borderColor: "rgba(255,255,255,0.05)",
-                      borderRadius: "12px",
-                      fontSize: "10px",
-                    }}
-                  />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            {/* Visual Mini Chart */}
+            <div className="h-28 w-full flex items-center justify-center">
+              {loadDevices ? (
+                <Loader2 className="h-5 w-5 animate-spin text-accent" />
+              ) : devices && devices.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={devices} layout="vertical" barCategoryGap="20%">
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" hide />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0B1020",
+                        borderColor: "rgba(255,255,255,0.05)",
+                        borderRadius: "12px",
+                        fontSize: "10px",
+                      }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <span className="text-xs text-slate-600 font-bold uppercase tracking-wide">Waiting for device logs</span>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -279,10 +283,13 @@ export default function Dashboard() {
                     <Smartphone className="h-4 w-4 text-accent" />
                     <span>Mobile Platform</span>
                   </span>
-                  <span>78%</span>
+                  <span>{devices && devices.find(d => d.name === "Mobile")?.percentage || 0}%</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
-                  <div className="h-full w-[78%] bg-accent rounded-full" />
+                  <div
+                    style={{ width: `${devices && devices.find(d => d.name === "Mobile")?.percentage || 0}%` }}
+                    className="h-full bg-accent rounded-full transition-all duration-300"
+                  />
                 </div>
               </div>
 
@@ -290,12 +297,12 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between text-xs font-bold text-slate-400">
                   <span className="flex items-center gap-1.5">
                     <Globe className="h-4 w-4 text-cyan-accent" />
-                    <span>Geo: United States</span>
+                    <span>Geo: {countryName}</span>
                   </span>
-                  <span>65%</span>
+                  <span>{countryClicksCount} clicks</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
-                  <div className="h-full w-[65%] bg-cyan-accent rounded-full" />
+                  <div className="h-full w-full bg-cyan-accent rounded-full" />
                 </div>
               </div>
             </div>
@@ -325,7 +332,12 @@ export default function Dashboard() {
           {/* Links Directory list */}
           <div className="rounded-2xl border border-white/[0.03] bg-slate-900/10 overflow-hidden shadow-2xl backdrop-blur-xl">
             <div className="divide-y divide-white/[0.03]">
-              {filteredLinks.length > 0 ? (
+              {loadLinks ? (
+                <div className="p-12 flex flex-col items-center gap-2 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                  <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                  <span>Syncing link directory...</span>
+                </div>
+              ) : filteredLinks.length > 0 ? (
                 filteredLinks.map((link) => (
                   <div key={link.shortCode} className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 hover:bg-white/[0.01] transition duration-200">
                     <div className="space-y-2.5 overflow-hidden flex-1">
