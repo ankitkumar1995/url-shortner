@@ -13,6 +13,18 @@ RedisService.getInstance();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Permissive CORS Middleware to support frontend cross-origin queries!
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-api-key");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
+
 // Health Check Endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK", timestamp: new Date() });
@@ -27,6 +39,16 @@ app.post(
   slidingWindowRateLimiter(60, 10),
   UrlController.createShortUrl
 );
+
+// Links Directory
+app.get("/api/v1/links", UrlController.getAllLinks);
+
+// Analytics REST API Routing
+app.get("/api/v1/analytics/overview", UrlController.getAnalyticsOverview);
+app.get("/api/v1/analytics/clicks", UrlController.getAnalyticsClicks);
+app.get("/api/v1/analytics/devices", UrlController.getAnalyticsDevices);
+app.get("/api/v1/analytics/countries", UrlController.getAnalyticsCountries);
+app.get("/api/v1/analytics/referrers", UrlController.getAnalyticsReferrers);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

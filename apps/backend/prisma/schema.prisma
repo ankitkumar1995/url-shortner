@@ -34,6 +34,7 @@ model Url {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clicks      Click[]
 
   @@index([shortCode])
   @@index([userId])
@@ -54,3 +55,23 @@ model ApiKey {
 
   @@map("api_keys")
 }
+
+model Click {
+  id         BigInt   @id @default(autoincrement())
+  shortCode  String   @map("short_code") @db.VarChar(12)
+  ip         String   @db.VarChar(45)
+  country    String   @default("United States") @db.VarChar(100)
+  browser    String   @default("Chrome") @db.VarChar(50)
+  device     String   @default("Desktop") @db.VarChar(50)
+  os         String   @default("Windows") @db.VarChar(50)
+  referrer   String   @default("Direct") @db.VarChar(512)
+  timestamp  DateTime @default(now()) @map("timestamp")
+  latency    Int      @default(0) // Redirection latency in milliseconds
+
+  url        Url      @relation(fields: [shortCode], references: [shortCode], onDelete: Cascade)
+
+  @@index([shortCode])
+  @@index([timestamp])
+  @@map("clicks")
+}
+
