@@ -201,6 +201,11 @@ export class AnalyticsService {
       const refGroups = await prisma.click.groupBy({
         by: ['referrer'],
         _count: { id: true },
+        orderBy: {
+          _count: {
+            id: 'desc'
+          }
+        },
         take: 5
       });
 
